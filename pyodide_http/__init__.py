@@ -5,7 +5,7 @@ try:
 except ImportError:
     _SHOULD_PATCH = False
 
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 
 
 def patch_requests(continue_on_import_error: bool = False):
@@ -21,18 +21,18 @@ def patch_requests(continue_on_import_error: bool = False):
         patch()
 
 
-# def patch_urllib(continue_on_import_error: bool = False):
-#     if not _SHOULD_PATCH:
-#         return
-#
-#     try:
-#         from .patch_urllib import patch
-#     except ImportError:
-#         if continue_on_import_error:
-#             return
-#         raise
-#     else:
-#         patch()
+def patch_urllib(continue_on_import_error: bool = False):
+    if not _SHOULD_PATCH:
+        return
+
+    try:
+        from ._urllib import patch
+    except ImportError:
+        if continue_on_import_error:
+            return
+        raise
+    else:
+        patch()
 
 
 def should_patch():
@@ -41,4 +41,4 @@ def should_patch():
 
 def patch_all():
     patch_requests(continue_on_import_error=True)
-    # patch_urllib(continue_on_import_error=True)
+    patch_urllib(continue_on_import_error=True)
