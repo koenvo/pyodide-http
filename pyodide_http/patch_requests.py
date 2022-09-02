@@ -25,7 +25,7 @@ class Session:
 
         response = requests.Response()
         # Fallback to None if there's no status_code, for whatever reason.
-        response.status_code = getattr(resp, "status", None)
+        response.status_code = getattr(resp, "status_code", None)
         # Make headers case-insensitive.
         response.headers = CaseInsensitiveDict(resp.headers)
         # Set encoding.

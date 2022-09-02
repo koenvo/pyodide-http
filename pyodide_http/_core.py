@@ -24,7 +24,7 @@ class Request:
 
 @dataclass
 class Response:
-    code: int
+    status_code: int
     headers: Dict[str, str]
     body: bytes
 
@@ -43,7 +43,7 @@ def send(request: Request) -> Response:
     headers = dict(Parser().parsestr(xhr.getAllResponseHeaders()))
 
     return Response(
-        code=xhr.status,
+        status_code=xhr.status,
         headers=headers,
         body=xhr.response.to_py().tobytes()
     )
