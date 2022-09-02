@@ -5,14 +5,14 @@ try:
 except ImportError:
     _SHOULD_PATCH = False
 
-__version__ = '0.0.2'
+__version__ = '0.0.5'
 
 
 def patch_requests(continue_on_import_error: bool = False):
     if not _SHOULD_PATCH:
         return
     try:
-        from .patch_requests import patch
+        from ._requests import patch
     except ImportError:
         if continue_on_import_error:
             return

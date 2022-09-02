@@ -23,7 +23,3 @@ response = requests.get('https://raw.githubusercontent.com/statsbomb/open-data/m
 This package applies patches to common http libraries. How the patch works depends on the package.
 
 All requests are replaced with calls using `XMLHttpRequest`. 
-
-### requests
-
-When you call `requests.get` under the hood `requests.request` is called. This method initializes a `Session` as a context manager and calls its `request` method. The pyodide-http package replaces the `Session` constructor. This makes it possible to replace the `Session.request` method with a patched on.  
