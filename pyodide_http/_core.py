@@ -32,7 +32,6 @@ class Response:
 def send(request: Request) -> Response:
     from js import XMLHttpRequest
     xhr = XMLHttpRequest.new()
-    xhr.responseType = "arraybuffer"
 
     for name, value in request.headers.items():
         xhr.setRequestHeader(name, value)
@@ -45,6 +44,6 @@ def send(request: Request) -> Response:
     return Response(
         status_code=xhr.status,
         headers=headers,
-        body=xhr.response.to_py().tobytes()
+        body=bytes(xhr.response, unicode="utf-8")
     )
 
