@@ -31,10 +31,19 @@ def urlopen(url):
     resp = send(request)
 
     # Build a fake http response
+    # Strip out the content-length header. When Content-Encoding is 'gzip' (or other
+    # compressed format) the 'Content-Length' is the compressed length, while the
+    # data itself is uncompressed. This will cause problems while decoding our
+    # fake response.
+    headers_without_content_length = {
+        k: v
+        for k, v in resp.headers.items()
+        if k != 'content-length'
+    }
     response_data = (
         b'HTTP/1.1 ' + str(resp.status_code).encode('ascii') + b"\n" +
         "\n".join(
-            f"{key}: {value}" for key, value in resp.headers.items()
+            f"{key}: {value}" for key, value in headers_without_content_length.items()
         ).encode('ascii') + b"\n\n" +
         resp.body
     )
