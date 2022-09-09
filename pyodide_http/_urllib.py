@@ -18,7 +18,16 @@ class FakeSock:
 
 
 def urlopen(url):
-    request = Request('GET', url)
+    method = 'GET'
+    data = None
+    headers = {}
+    if isinstance(url, urllib.request.Request):
+        method = url.get_method()
+        data = url.data
+        headers = dict(url.header_items())
+        url = url.full_url
+
+    request = Request(method, url, headers=headers, body=data)
     resp = send(request)
 
     # Build a fake http response

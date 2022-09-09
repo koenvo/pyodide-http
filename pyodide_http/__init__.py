@@ -5,7 +5,7 @@ try:
 except ImportError:
     _SHOULD_PATCH = False
 
-__version__ = '0.0.6'
+__version__ = '0.0.7'
 
 
 def patch_requests(continue_on_import_error: bool = False):

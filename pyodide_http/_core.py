@@ -8,18 +8,18 @@ from email.parser import Parser
 class Request:
     method: str
     url: str
-    body: Optional[str] = None
+    body: Optional[bytes] = None
     headers: Dict[str, str] = field(default_factory=dict)
 
     def set_header(self, name: str, value: str):
         self.headers[name] = value
 
-    def set_body(self, body: str):
+    def set_body(self, body: bytes):
         self.body = body
 
     def set_json(self, body: dict):
-        self.set_header("Content-Type", "application/json")
-        self.set_body(json.dumps(body))
+        self.set_header("Content-Type", "application/json; charset=utf-8")
+        self.set_body(json.dumps(body).encode('utf-8'))
 
 
 @dataclass
@@ -31,20 +31,34 @@ class Response:
 
 def send(request: Request) -> Response:
     from js import XMLHttpRequest
-    xhr = XMLHttpRequest.new()
-    xhr.responseType = "arraybuffer"
+    try:
+        from js import importScripts
+        _IN_WORKER = True
+    except ImportError:
+        _IN_WORKER = False
 
+    xhr = XMLHttpRequest.new()
     for name, value in request.headers.items():
         xhr.setRequestHeader(name, value)
+
+    if _IN_WORKER:
+        xhr.responseType = "arraybuffer"
+    else:
+        xhr.overrideMimeType('text/plain; charset=ISO-8859-15')
 
     xhr.open(request.method, request.url, False)
     xhr.send(request.body)
 
     headers = dict(Parser().parsestr(xhr.getAllResponseHeaders()))
 
+    if _IN_WORKER:
+        body = xhr.response.to_py().tobytes()
+    else:
+        body = xhr.response.encode('ISO-8859-15')
+
     return Response(
         status_code=xhr.status,
         headers=headers,
-        body=xhr.response.to_py().tobytes()
+        body=body
     )
 
