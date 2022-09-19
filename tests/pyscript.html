@@ -1,0 +1,43 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+    <title>PyScript Hello World</title>
+
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" href="https://pyscript.net/alpha/pyscript.css" />
+
+    <script defer src="https://pyscript.net/alpha/pyscript.js"></script>
+  </head>
+
+  <body>
+
+    <div id="image-wrapper">Pyodide image should show here...</div>
+
+    <py-script>
+    import asyncio
+    import base64
+
+    async def init():
+        import micropip
+        await micropip.install("pyodide-http")
+        await micropip.install("requests")
+        import pyodide_http
+        pyodide_http.patch_all()
+
+        import requests
+        data = requests.get("https://raw.githubusercontent.com/pyodide/pyodide/main/docs/_static/img/pyodide-logo-readme.png")
+
+        from js import document
+        img = document.createElement("img")
+        img.src = "data:image/png;base64," + base64.b64encode(data.content).decode()
+        wrapper = document.getElementById("image-wrapper")
+        wrapper.appendChild(img)
+
+    init()
+    </py-script>
+  </body>
+</html>
