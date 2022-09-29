@@ -33,9 +33,7 @@ self.addEventListener("message", async function (event) {
         Atomics.wait(intBuffer, 0, intBuffer[0], 500);// wait until it resets to zero which means read
         const reader = response.body.getReader();
         while (true) {
-            console.log("Before read")
             let { value, done } = await reader.read();
-            console.log("READER:"+(value?value.length:"EMPTY")+":"+done);
             if (value) {
                 // pass a chunk back to the sharedarraybuffer - wait half a second or else assume it
                 // didn't get consumed for some reason and abort
@@ -59,7 +57,6 @@ self.addEventListener("message", async function (event) {
                 }
             }
             if (done) {
-                console.log("Done reading")
                 Atomics.store(intBuffer, 0, SUCCESS_EOF);
                 Atomics.notify(intBuffer,0);
                 // finished reading successfully
