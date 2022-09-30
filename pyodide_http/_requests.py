@@ -17,6 +17,12 @@ class Session:
 
     @staticmethod
     def request(method, url, **kwargs):
+        if 'params' in kwargs:
+            from js import URLSearchParams
+            params = URLSearchParams.new()
+            for k, v in kwargs['params'].items():
+                params.append(k, v)
+            url += "?"+params.toString()
         request = Request(method, url)
         request.headers = kwargs.get('headers', {})
         if 'json' in kwargs:
