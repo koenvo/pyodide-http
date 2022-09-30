@@ -31,20 +31,31 @@ class Response:
     body: bytes
 
 
+_SHOWN_WARNING=False
+
 def send(request: Request, stream: bool = False) -> Response:
-    if stream:
-        from ._streaming import send_streaming_request
-        result = send_streaming_request(request)
-        if result == False:
-            stream = False
-        else:
-            return result
+    global _SHOWN_WARNING
     from js import XMLHttpRequest
     try:
         from js import importScripts
         _IN_WORKER = True
     except ImportError:
         _IN_WORKER = False
+    # support for streaming workers (in worker )
+    if stream:
+        if not _IN_WORKER:
+            stream = False
+            if not _shown_warning:
+                _shown_warning=True
+                from js import console
+                console.warning("requests can't stream data in the main thread, using non-streaming fallback")
+        else:
+            from ._streaming import send_streaming_request
+            result = send_streaming_request(request)
+            if result == False:
+                stream = False
+            else:
+                return result
 
     xhr = XMLHttpRequest.new()
     for name, value in request.headers.items():

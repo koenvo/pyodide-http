@@ -17,8 +17,8 @@ class Session:
 
     @staticmethod
     def request(method, url, **kwargs):
-        from js import URLSearchParams
         if 'params' in kwargs:
+            from js import URLSearchParams
             params = URLSearchParams.new()
             for k, v in kwargs['params'].items():
                 params.append(k, v)

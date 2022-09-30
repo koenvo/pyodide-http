@@ -1,3 +1,23 @@
+"""
+Support for streaming http requests. 
+
+A couple of caveats - 
+
+Firstly, you can't do streaming http in the main UI thread, because atomics.wait isn't allowed. This only
+works if you're running pyodide in a web worker.
+
+Secondly, this uses an extra web worker and SharedArrayBuffer to do the asynchronous fetch
+operation, so it requires that you have crossOriginIsolation enabled, by serving over https 
+(or from localhost) with the two headers below set:
+
+    Cross-Origin-Opener-Policy: same-origin
+    Cross-Origin-Embedder-Policy: require-corp
+
+You can tell if cross origin isolation is successfully enabled by looking at the global crossOriginIsolated variable in 
+javascript console. If it isn't, requests with stream set to True will fallback to XMLHttpRequest, i.e. getting the whole
+request into a buffer and then returning it. it shows a warning in the javascript console in this case.
+"""
+
 
 import io
 import json
@@ -196,13 +216,16 @@ if crossOriginIsolated:
 else:
     _fetcher = None
 
+_SHOWN_WARNING=False
 
 def send_streaming_request(request: Request):
-    global _fetcher
+    global _fetcher,_SHOWN_WARNING
     if _fetcher:
         return _fetcher.send(request)
     else:
-        from js import console
-        console.warning(
-            "requests can't stream data because site is not cross origin isolated")
+        if not _SHOWN_WARNING:
+            _SHOWN_WARNING=True
+            from js import console
+            console.warning(
+                "requests can't stream data because site is not cross origin isolated, using non-streaming fallback")
         return False
