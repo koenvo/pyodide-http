@@ -1,4 +1,4 @@
-from io import BytesIO,IOBase
+from io import BytesIO, IOBase
 
 import requests
 from requests.utils import get_encoding_from_headers, CaseInsensitiveDict
@@ -17,18 +17,18 @@ class Session:
 
     @staticmethod
     def request(method, url, **kwargs):
-        from  js import URLSearchParams
+        from js import URLSearchParams
         if 'params' in kwargs:
-            params=URLSearchParams.new()
-            for k,v in kwargs['params'].items():
-                params.append(k,v)
-            url+="?"+params.toString()
+            params = URLSearchParams.new()
+            for k, v in kwargs['params'].items():
+                params.append(k, v)
+            url += "?"+params.toString()
         stream = kwargs.get('stream', False)
         request = Request(method, url)
         request.headers = kwargs.get('headers', {})
         if 'json' in kwargs:
             request.set_json(kwargs['json'])
-        resp = send(request,stream)
+        resp = send(request, stream)
 
         response = requests.Response()
         # Fallback to None if there's no status_code, for whatever reason.
@@ -37,7 +37,7 @@ class Session:
         response.headers = CaseInsensitiveDict(resp.headers)
         # Set encoding.
         response.encoding = get_encoding_from_headers(response.headers)
-        if issubclass(type(resp.body),IOBase):
+        if issubclass(type(resp.body), IOBase):
             # streaming response
             response.raw = resp.body
         else:

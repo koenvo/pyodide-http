@@ -5,6 +5,7 @@ from email.parser import Parser
 # need to import streaming here so that the web-worker is setup
 from ._streaming import send_streaming_request
 
+
 @dataclass
 class Request:
     method: str
@@ -29,12 +30,13 @@ class Response:
     headers: Dict[str, str]
     body: bytes
 
-def send(request: Request,stream:bool=False) -> Response:    
+
+def send(request: Request, stream: bool = False) -> Response:
     if stream:
         from ._streaming import send_streaming_request
-        result=send_streaming_request(request)
-        if result==False:
-            stream=False
+        result = send_streaming_request(request)
+        if result == False:
+            stream = False
         else:
             return result
     from js import XMLHttpRequest
@@ -68,4 +70,3 @@ def send(request: Request,stream:bool=False) -> Response:
         headers=headers,
         body=body
     )
-
