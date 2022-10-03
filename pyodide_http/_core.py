@@ -10,6 +10,7 @@ from ._streaming import send_streaming_request
 class Request:
     method: str
     url: str
+    params: Optional[Dict[str,str]]=None
     body: Optional[bytes] = None
     headers: Dict[str, str] = field(default_factory=dict)
 
@@ -34,6 +35,13 @@ class Response:
 _SHOWN_WARNING=False
 
 def send(request: Request, stream: bool = False) -> Response:
+    if request.params:
+        from js import URLSearchParams
+        params = URLSearchParams.new()
+        for k, v in request.params.items():
+            params.append(k, v)
+        request.url += "?"+params.toString()
+
     global _SHOWN_WARNING
     from js import XMLHttpRequest
     try:
@@ -48,7 +56,7 @@ def send(request: Request, stream: bool = False) -> Response:
             if not _shown_warning:
                 _shown_warning=True
                 from js import console
-                console.warning("requests can't stream data in the main thread, using non-streaming fallback")
+                console.warn("requests can't stream data in the main thread, using non-streaming fallback")
         else:
             from ._streaming import send_streaming_request
             result = send_streaming_request(request)

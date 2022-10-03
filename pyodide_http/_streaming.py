@@ -226,6 +226,6 @@ def send_streaming_request(request: Request):
         if not _SHOWN_WARNING:
             _SHOWN_WARNING=True
             from js import console
-            console.warning(
+            console.warn(
                 "requests can't stream data because site is not cross origin isolated, using non-streaming fallback")
         return False
