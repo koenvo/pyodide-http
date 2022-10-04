@@ -28,6 +28,7 @@ class Request:
     params: Optional[Dict[str,str]]=None
     body: Optional[bytes] = None
     headers: Dict[str, str] = field(default_factory=dict)
+    timeout: int = 0
 
     def set_header(self, name: str, value: str):
         self.headers[name] = value
@@ -84,6 +85,11 @@ def send(request: Request, stream: bool = False) -> Response:
                 return result
 
     xhr = XMLHttpRequest.new()
+    # set timeout only if pyodide is in a worker, because
+    # there is a warning not to set timeout on synchronous main thread
+    # XMLHttpRequest https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/timeout
+    if _IN_WORKER and request.timeout!=0:
+        xhr.timeout=int(request.timeout*1000)
     for name, value in request.headers.items():
         xhr.setRequestHeader(name, value)
 

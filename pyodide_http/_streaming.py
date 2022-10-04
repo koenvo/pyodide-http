@@ -57,7 +57,7 @@ self.addEventListener("message", async function (event) {
         // magic number for header ready
         Atomics.store(intBuffer, 0, SUCCESS_HEADER);
         Atomics.notify(intBuffer,0);
-        Atomics.wait(intBuffer, 0, intBuffer[0], 500);// wait until it resets to zero which means read
+        Atomics.wait(intBuffer, 0, intBuffer[0]);// wait until it resets to zero which means it was read
         const reader = response.body.getReader();
         while (true) {
             let { value, done } = await reader.read();
@@ -113,11 +113,12 @@ def _obj_from_dict(dict_val: dict) -> any:
 
 
 class _ReadStream(io.RawIOBase):
-    def __init__(self, int_buffer, byte_buffer):
+    def __init__(self, int_buffer, byte_buffer,timeout):
         self.int_buffer = int_buffer
         self.byte_buffer = byte_buffer
         self.read_pos = 0
         self.read_len = 0
+        self.timeout=int(1000*timeout) if timeout>0 else None
 
     def readable(self) -> bool:
         return True
@@ -135,7 +136,9 @@ class _ReadStream(io.RawIOBase):
             # wait for the worker to send something
             js.Atomics.store(self.int_buffer, 0, 0)
             js.Atomics.notify(self.int_buffer, 0)
-            js.Atomics.wait(self.int_buffer, 0, 0, 5000)
+            if js.Atomics.wait(self.int_buffer, 0, 0, self.timeout)=='timed-out':
+                from ._core import _StreamingTimeout
+                raise  _StreamingTimeout
             data_len = self.int_buffer[0]
             if data_len > 0:
                 self.read_len = data_len
@@ -171,7 +174,7 @@ class _StreamingFetcher:
         fetch_data = _obj_from_dict(
             {"headers": headers, "body": body, "method": request.method})
         # start the request off in the worker
-
+        timeout=int(1000*timeout) if request.timeout>0 else None
         shared_buffer = js.SharedArrayBuffer.new(1048576)
         int_buffer = js.Int32Array.new(shared_buffer)
         byte_buffer = js.Uint8Array.new(shared_buffer, 8)
@@ -182,7 +185,7 @@ class _StreamingFetcher:
         self._worker.postMessage(_obj_from_dict(
             {"buffer": shared_buffer, "url": absolute_url, "fetchParams": fetch_data}))
         # wait for the worker to send something
-        js.Atomics.wait(int_buffer, 0, 0, 10000)
+        js.Atomics.wait(int_buffer, 0, 0, timeout)
         if int_buffer[0] == 0:
             from ._core import _StreamingTimeout
             raise _StreamingTimeout("Timeout connecting to streaming request",request=request, response=None)
@@ -201,7 +204,7 @@ class _StreamingFetcher:
                 status_code=response_obj["status"],
                 headers=response_obj["headers"],
                 body=io.BufferedReader(_ReadStream(
-                    int_buffer, byte_buffer), buffer_size=1048576)
+                    int_buffer, byte_buffer,request.timeout), buffer_size=1048576)
             )
         if int_buffer[0] == ERROR_EXCEPTION:
             string_len = int_buffer[1]

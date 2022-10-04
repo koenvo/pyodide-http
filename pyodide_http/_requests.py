@@ -20,16 +20,17 @@ class Session:
     def request(method, url, **kwargs):
         stream = kwargs.get('stream', False)
         request = Request(method, url)
+        request.timeout=kwargs.get('timeout',0)
         request.params=kwargs.get('params',None)
         request.headers = kwargs.get('headers', {})
         if 'json' in kwargs:
             request.set_json(kwargs['json'])
         try:
             resp = send(request, stream)
-        except _StreamingTimeout as e:
-            from requests import ConnectionTimeout
-            raise ConnectionTimeout(request=request)
-        except _StreamingError as e:
+        except _StreamingTimeout:
+            from requests import ConnectTimeout
+            raise ConnectTimeout(request=request)
+        except _StreamingError:
             from requests import ConnectionError
             raise ConnectionError(request=request)
         response = requests.Response()
