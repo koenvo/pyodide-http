@@ -5,6 +5,21 @@ from email.parser import Parser
 # need to import streaming here so that the web-worker is setup
 from ._streaming import send_streaming_request
 
+class _RequestError(Exception):
+    def __init__(self,message=None,*,request=None,response=None):
+        self.request=request
+        self.response=response
+        self.message=message
+        super().__init__(self.message)
+
+
+class _StreamingError(_RequestError):
+    pass
+
+class _StreamingTimeout(_StreamingError):
+    pass
+
+
 
 @dataclass
 class Request:
@@ -34,6 +49,14 @@ class Response:
 
 _SHOWN_WARNING=False
 
+def show_streaming_warning():
+    global _SHOWN_WARNING
+    if not _SHOWN_WARNING:
+        _SHOWN_WARNING=True
+        from js import console
+        console.warn("requests can't stream data in the main thread, using non-streaming fallback")
+
+
 def send(request: Request, stream: bool = False) -> Response:
     if request.params:
         from js import URLSearchParams
@@ -42,7 +65,6 @@ def send(request: Request, stream: bool = False) -> Response:
             params.append(k, v)
         request.url += "?"+params.toString()
 
-    global _SHOWN_WARNING
     from js import XMLHttpRequest
     try:
         from js import importScripts
@@ -53,12 +75,8 @@ def send(request: Request, stream: bool = False) -> Response:
     if stream:
         if not _IN_WORKER:
             stream = False
-            if not _shown_warning:
-                _shown_warning=True
-                from js import console
-                console.warn("requests can't stream data in the main thread, using non-streaming fallback")
+            show_streaming_warning()
         else:
-            from ._streaming import send_streaming_request
             result = send_streaming_request(request)
             if result == False:
                 stream = False

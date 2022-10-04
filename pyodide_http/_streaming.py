@@ -41,6 +41,7 @@ self.addEventListener("message", async function (event) {
     const intBuffer = new Int32Array(event.data.buffer);
     const byteBuffer=new Uint8Array(event.data.buffer,8)
     try {
+
         const response = await fetch(event.data.url, event.data.fetchParams);
         // return the headers first via textencoder
         var headers = [];
@@ -93,7 +94,7 @@ self.addEventListener("message", async function (event) {
     }
     catch (error) {
             console.log("Request exception:",error);
-            let errorBytes=encoder.encode(errorBytes);
+            let errorBytes=encoder.encode(error.message);
             let written = errorBytes.length;
             byteBuffer.set(errorBytes);
             intBuffer[1] = written;
@@ -155,7 +156,7 @@ class _ReadStream(io.RawIOBase):
         return ret_length
 
 
-class _Streaming_Fetcher:
+class _StreamingFetcher:
     def __init__(self):
         # make web-worker and data buffer on startup
         dataBlob = js.Blob.new([_STREAMING_WORKER_CODE], _obj_from_dict(
@@ -183,8 +184,8 @@ class _Streaming_Fetcher:
         # wait for the worker to send something
         js.Atomics.wait(int_buffer, 0, 0, 10000)
         if int_buffer[0] == 0:
-            from requests import ConnectTimeout
-            raise ConnectTimeout(request=request, response=None)
+            from ._core import _StreamingTimeout
+            raise _StreamingTimeout("Timeout connecting to streaming request",request=request, response=None)
         if int_buffer[0] == SUCCESS_HEADER:
             # got response
             # header length is in second int of intBuffer
@@ -207,25 +208,19 @@ class _Streaming_Fetcher:
             # decode the error string
             decoder = js.TextDecoder.new()
             json_str = decoder.decode(byte_buffer.slice(0, string_len))
-            from requests import ConnectionError
-            raise ConnectionError(request=request, response=None)
+            from ._core import _StreamingError
+            raise _StreamingError(f"Exception thrown in fetch: {json_str}",request=request, response=None)
 
 
 if crossOriginIsolated:
-    _fetcher = _Streaming_Fetcher()
+    _fetcher = _StreamingFetcher()
 else:
     _fetcher = None
 
-_SHOWN_WARNING=False
-
 def send_streaming_request(request: Request):
-    global _fetcher,_SHOWN_WARNING
     if _fetcher:
         return _fetcher.send(request)
     else:
-        if not _SHOWN_WARNING:
-            _SHOWN_WARNING=True
-            from js import console
-            console.warn(
-                "requests can't stream data because site is not cross origin isolated, using non-streaming fallback")
+        from ._core import show_streaming_warning
+        show_streaming_warning()
         return False

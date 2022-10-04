@@ -4,6 +4,7 @@ import requests
 from requests.utils import get_encoding_from_headers, CaseInsensitiveDict
 
 from ._core import Request, send
+from ._core import _StreamingError,_StreamingTimeout
 
 _IS_PATCHED = False
 
@@ -23,8 +24,14 @@ class Session:
         request.headers = kwargs.get('headers', {})
         if 'json' in kwargs:
             request.set_json(kwargs['json'])
-        resp = send(request, stream)
-
+        try:
+            resp = send(request, stream)
+        except _StreamingTimeout as e:
+            from requests import ConnectionTimeout
+            raise ConnectionTimeout(request=request)
+        except _StreamingError as e:
+            from requests import ConnectionError
+            raise ConnectionError(request=request)
         response = requests.Response()
         # Fallback to None if there's no status_code, for whatever reason.
         response.status_code = getattr(resp, "status_code", None)
@@ -32,7 +39,7 @@ class Session:
         response.headers = CaseInsensitiveDict(resp.headers)
         # Set encoding.
         response.encoding = get_encoding_from_headers(response.headers)
-        if issubclass(type(resp.body), IOBase):
+        if isinstance(resp.body, IOBase):
             # streaming response
             response.raw = resp.body
         else:
