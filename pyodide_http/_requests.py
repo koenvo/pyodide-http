@@ -1,9 +1,10 @@
-from io import BytesIO
+from io import BytesIO, IOBase
 
 import requests
 from requests.utils import get_encoding_from_headers, CaseInsensitiveDict
 
 from ._core import Request, send
+from ._core import _StreamingError,_StreamingTimeout
 
 _IS_PATCHED = False
 
@@ -17,12 +18,21 @@ class Session:
 
     @staticmethod
     def request(method, url, **kwargs):
+        stream = kwargs.get('stream', False)
         request = Request(method, url)
+        request.timeout=kwargs.get('timeout',0)
+        request.params=kwargs.get('params',None)
         request.headers = kwargs.get('headers', {})
         if 'json' in kwargs:
             request.set_json(kwargs['json'])
-        resp = send(request)
-
+        try:
+            resp = send(request, stream)
+        except _StreamingTimeout:
+            from requests import ConnectTimeout
+            raise ConnectTimeout(request=request)
+        except _StreamingError:
+            from requests import ConnectionError
+            raise ConnectionError(request=request)
         response = requests.Response()
         # Fallback to None if there's no status_code, for whatever reason.
         response.status_code = getattr(resp, "status_code", None)
@@ -30,7 +40,12 @@ class Session:
         response.headers = CaseInsensitiveDict(resp.headers)
         # Set encoding.
         response.encoding = get_encoding_from_headers(response.headers)
-        response.raw = BytesIO(resp.body)
+        if isinstance(resp.body, IOBase):
+            # streaming response
+            response.raw = resp.body
+        else:
+            # non-streaming response, make it look like a stream
+            response.raw = BytesIO(resp.body)
         response.reason = ''
         response.url = url
         return response
