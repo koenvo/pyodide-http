@@ -31,80 +31,104 @@ ERROR_TIMEOUT = -3
 ERROR_EXCEPTION = -4
 
 _STREAMING_WORKER_CODE = """
-let SUCCESS_HEADER=-1
-let SUCCESS_EOF=-2
-let ERROR_TIMEOUT=-3
-let ERROR_EXCEPTION=-4
+let SUCCESS_HEADER = -1
+let SUCCESS_EOF = -2
+let ERROR_TIMEOUT = -3
+let ERROR_EXCEPTION = -4
 
+let connections = {};
+let nextConnectionID = 1;
 self.addEventListener("message", async function (event) {
-    const encoder = new TextEncoder();
-    const intBuffer = new Int32Array(event.data.buffer);
-    const byteBuffer=new Uint8Array(event.data.buffer,8)
-    try {
-
-        const response = await fetch(event.data.url, event.data.fetchParams);
-        // return the headers first via textencoder
-        var headers = [];
-        for (const pair of response.headers.entries()) {
-            headers.push([pair[0], pair[0]]);
-        }
-        headerObj = { headers: headers, status: response.status };
-        const headerText = JSON.stringify(headerObj);
-        let headerBytes=encoder.encode(headerText);
-        let written = headerBytes.length;
-        byteBuffer.set(headerBytes);
-        intBuffer[1] = written;
-        // magic number for header ready
-        Atomics.store(intBuffer, 0, SUCCESS_HEADER);
-        Atomics.notify(intBuffer,0);
-        Atomics.wait(intBuffer, 0, intBuffer[0]);// wait until it resets to zero which means it was read
-        const reader = response.body.getReader();
-        while (true) {
-            let { value, done } = await reader.read();
-            if (value) {
-                // pass a chunk back to the sharedarraybuffer - wait half a second or else assume it
-                // didn't get consumed for some reason and abort
-                let curOffset = 0;
-                while (curOffset < value.length) {
-
-                    let curLen = value.length - curOffset;
-                    if (curLen > byteBuffer.length) {
-                        curLen = byteBuffer.length;
-                    }
-                    byteBuffer.set(value.subarray(curOffset, curOffset+curLen), 0)
-                    Atomics.store(intBuffer, 0, curLen);// store current length in bytes
-                    Atomics.notify(intBuffer,0);
-                    Atomics.wait(intBuffer, 0, intBuffer[0]);// wait until it resets to zero 
-                    if(intBuffer[0]!=0)
-                    {
-                        throw "Error - intBuffer not read";
-                    }
-                    // which means it is read by the other end
-                    curOffset += curLen;
+    if(event.data.close)
+    {
+        let connectionID=event.data.close;
+        delete connections[connectionID];
+        return;
+    }else if (event.data.getMore) {
+        let connectionID = event.data.getMore;
+        let { curOffset, value, reader,intBuffer,byteBuffer } = connections[connectionID];
+        // if we still have some in buffer, then just send it back straight away
+        if (!value || curOffset >= value.length) {
+            // read another buffer if required
+            try
+            {
+                let readResponse = await reader.read();
+                
+                if (readResponse.done) {
+                    // read everything - clear connection and return
+                    delete connections[connectionID];
+                    Atomics.store(intBuffer, 0, SUCCESS_EOF);
+                    Atomics.notify(intBuffer, 0);
+                    // finished reading successfully
+                    // return from event handler 
+                    return;
                 }
-            }
-            if (done) {
-                Atomics.store(intBuffer, 0, SUCCESS_EOF);
-                Atomics.notify(intBuffer,0);
-                // finished reading successfully
-                // return from event handler 
-                return;
+                curOffset = 0;
+                connections[connectionID].value = readResponse.value;
+                value=readResponse.value;
+            }catch(error)
+            {
+                console.log("Request exception:", error);
+                let errorBytes = encoder.encode(error.message);
+                let written = errorBytes.length;
+                byteBuffer.set(errorBytes);
+                intBuffer[1] = written;
+                Atomics.store(intBuffer, 0, ERROR_EXCEPTION);
+                Atomics.notify(intBuffer, 0);    
             }
         }
-    }
-    catch (error) {
-            console.log("Request exception:",error);
-            let errorBytes=encoder.encode(error.message);
+
+        // send as much buffer as we can 
+        let curLen = value.length - curOffset;
+        if (curLen > byteBuffer.length) {
+            curLen = byteBuffer.length;
+        }
+        byteBuffer.set(value.subarray(curOffset, curOffset + curLen), 0)
+        Atomics.store(intBuffer, 0, curLen);// store current length in bytes
+        Atomics.notify(intBuffer, 0);
+        curOffset+=curLen;
+        connections[connectionID].curOffset = curOffset;
+
+        return;
+    } else {
+        // start fetch
+        let connectionID = nextConnectionID;
+        nextConnectionID += 1;
+        const encoder = new TextEncoder();
+        const intBuffer = new Int32Array(event.data.buffer);
+        const byteBuffer = new Uint8Array(event.data.buffer, 8)
+        try {
+            const response = await fetch(event.data.url, event.data.fetchParams);
+            // return the headers first via textencoder
+            var headers = [];
+            for (const pair of response.headers.entries()) {
+                headers.push([pair[0], pair[0]]);
+            }
+            headerObj = { headers: headers, status: response.status, connectionID };
+            const headerText = JSON.stringify(headerObj);
+            let headerBytes = encoder.encode(headerText);
+            let written = headerBytes.length;
+            byteBuffer.set(headerBytes);
+            intBuffer[1] = written;
+            // make a connection
+            connections[connectionID] = { reader:response.body.getReader(),intBuffer:intBuffer,byteBuffer:byteBuffer,value:undefined,curOffset:0 };
+            // set header ready
+            Atomics.store(intBuffer, 0, SUCCESS_HEADER);
+            Atomics.notify(intBuffer, 0);
+            // all fetching after this goes through a new postmessage call with getMore
+            // this allows for parallel requests
+        }
+        catch (error) {
+            console.log("Request exception:", error);
+            let errorBytes = encoder.encode(error.message);
             let written = errorBytes.length;
             byteBuffer.set(errorBytes);
             intBuffer[1] = written;
             Atomics.store(intBuffer, 0, ERROR_EXCEPTION);
-            Atomics.notify(intBuffer,0);
+            Atomics.notify(intBuffer, 0);
         }
     }
-
-);
-
+});
 """
 
 
@@ -113,12 +137,17 @@ def _obj_from_dict(dict_val: dict) -> any:
 
 
 class _ReadStream(io.RawIOBase):
-    def __init__(self, int_buffer, byte_buffer,timeout):
+    def __init__(self, int_buffer, byte_buffer,timeout,worker,connection_id):
         self.int_buffer = int_buffer
         self.byte_buffer = byte_buffer
         self.read_pos = 0
         self.read_len = 0
+        self.connection_id=connection_id
+        self.worker=worker
         self.timeout=int(1000*timeout) if timeout>0 else None
+
+    def __del__(self):
+        self.worker.postMessage(_obj_from_dict({"close": self.connection_id}))
 
     def readable(self) -> bool:
         return True
@@ -135,7 +164,7 @@ class _ReadStream(io.RawIOBase):
         if self.read_len == 0:
             # wait for the worker to send something
             js.Atomics.store(self.int_buffer, 0, 0)
-            js.Atomics.notify(self.int_buffer, 0)
+            self.worker.postMessage(_obj_from_dict({"getMore": self.connection_id}))
             if js.Atomics.wait(self.int_buffer, 0, 0, self.timeout)=='timed-out':
                 from ._core import _StreamingTimeout
                 raise  _StreamingTimeout
@@ -143,6 +172,9 @@ class _ReadStream(io.RawIOBase):
             if data_len > 0:
                 self.read_len = data_len
                 self.read_pos = 0
+            elif data_len==ERROR_EXCEPTION:
+                from ._core import _StreamingError
+                raise _StreamingError
             else:
                 # EOF, free the buffers and return zero
                 self.read_len = 0
@@ -204,7 +236,7 @@ class _StreamingFetcher:
                 status_code=response_obj["status"],
                 headers=response_obj["headers"],
                 body=io.BufferedReader(_ReadStream(
-                    int_buffer, byte_buffer,request.timeout), buffer_size=1048576)
+                    int_buffer, byte_buffer,request.timeout,self._worker,response_obj["connectionID"]), buffer_size=1048576)
             )
         if int_buffer[0] == ERROR_EXCEPTION:
             string_len = int_buffer[1]
