@@ -23,7 +23,10 @@ import io
 import json
 import js
 from js import crossOriginIsolated
-from pyodide.ffi import to_js
+try:
+    from pyodide.ffi import to_js
+except ImportError:
+    from pyodide import to_js
 from urllib.request import Request
 SUCCESS_HEADER = -1
 SUCCESS_EOF = -2
@@ -201,10 +204,9 @@ class _StreamingFetcher:
 
     def send(self, request):
         from ._core import Response
-        headers = _obj_from_dict(request.headers)
+        headers = request.headers
         body = request.body
-        fetch_data = _obj_from_dict(
-            {"headers": headers, "body": body, "method": request.method})
+        fetch_data = {"headers": headers, "body": body, "method": request.method}
         # start the request off in the worker
         timeout=int(1000*timeout) if request.timeout>0 else None
         shared_buffer = js.SharedArrayBuffer.new(1048576)
@@ -214,6 +216,8 @@ class _StreamingFetcher:
         js.Atomics.store(int_buffer, 0, 0)
         js.Atomics.notify(int_buffer, 0)
         absolute_url = js.URL.new(request.url, js.location).href
+        js.console.log(_obj_from_dict(
+            {"buffer": shared_buffer, "url": absolute_url, "fetchParams": fetch_data}))
         self._worker.postMessage(_obj_from_dict(
             {"buffer": shared_buffer, "url": absolute_url, "fetchParams": fetch_data}))
         # wait for the worker to send something
