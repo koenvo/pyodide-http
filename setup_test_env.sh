@@ -19,7 +19,10 @@ pip install selenium webdriver-manager
 pip install chromedriver-binary-auto
 # make sure chromedriver is on path
 export PATH=$PATH:`chromedriver-path`
-# get pyodide to tests/pyodide
+
 # run the tests
 cd tests
+# get pyodide to tests/pyodide
+wget https://github.com/pyodide/pyodide/releases/download/0.21.0/pyodide-build-0.21.0.tar.bz2
+tar xjf pyodide-build-0.21.0.tar.bz2
 pytest . --dist-dir ./pyodide --rt chrome -v 
