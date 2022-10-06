@@ -40,25 +40,34 @@ data="data:image/png;base64," + base64.b64encode(data.content).decode()
             import requests
             import base64
             import js,pyodide.ffi
-            data = requests.get("https://cdn.jsdelivr.net/gh/BitDoctor/speed-test-file/10mb.txt",stream=True)
+            data = requests.get("https://lon.speedtest.clouvider.net/backend/garbage.php?cors=true&r=0.9144966641438186&ckSize=10",stream=True)
+            data2 = requests.get("https://lon.speedtest.clouvider.net/backend/garbage.php?cors=true&r=0.9144966641438186&ckSize=4",stream=True)
             total_len=0;
+            total_len2=0;
             while True:
               buffer=data.raw.read1()
-              if len(buffer)==0:
+              buffer2=data2.raw.read1()
+              if len(buffer)==0 and len(buffer2)==0:
                 break
               else:
                 total_len+=len(buffer)
-                js.postMessage(pyodide.ffi.to_js({"progress":total_len},dict_converter=js.Object.fromEntries))
+                total_len2+=len(buffer2)
+                js.postMessage(pyodide.ffi.to_js({"progress":total_len,"progress2":total_len2},dict_converter=js.Object.fromEntries))
             {"state":"STREAMED"}`})
         }
         else if(evt.data.results.state=="STREAMED")
         {
-          document.getElementById('progress_div').innerHTML+="Streaming done";
+          document.getElementById('progress_div').innerHTML+="Big file downloads done.";
         }
       }
       else if(evt.data.progress)
       {
-        document.getElementById('progress_div').innerHTML+=`Progress: ${evt.data.progress}<br/>`;
+        if(evt.data.progress>0 && evt.data.progress2>0 && evt.data.progress<10485760 && evt.data.progress2<4194304)
+        {
+          document.getElementById('streamInfo').innerHTML="Parallel streaming is working";
+        }
+        document.getElementById('bar1').style.width=(100.0*evt.data.progress / 10485760)+"%";
+        document.getElementById('bar2').style.width=(100.0*evt.data.progress2 / 4194304)+"%";
       }
       else if(evt.data.error)
       {
@@ -86,8 +95,12 @@ pyodide_http.patch_all()
 <body>
   <h1>Pyodide image should appear below</h1>
   <div id="result_div"></div>
-  <h1>If streaming is working, you should see more than one progress report below</h1>
-  <div id="progress_div"></div>
+  <h1>If streaming is working, you should see both progress bars rise at the same time.</h1>
+  <div id="progress_div">
+    <div id="progress1" style="width:50%;height:2em;border-style:solid;margin:.1em;border-width:.5em;border-color:black;background-color:gray"><div id="bar1" style="width:1%;height:100%;background-color:green"></div></div>
+    <div id="progress2" style="width:50%;height:2em;border-style:solid;margin:.1em;border-width:.5em;;border-color:black;background-color:gray"><div id="bar2" style="width:1%;height:100%;background-color:green"></div></div>
+    <div id="streamInfo"/>
+  </div>
 
 
 </body>
