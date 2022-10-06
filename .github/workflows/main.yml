@@ -11,7 +11,7 @@ on:
 
 jobs:
   # Build for pyodide 0.21.0
-  Pyodide_build:
+  Pyodide_test_and_build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -22,9 +22,9 @@ jobs:
       with:
         version: 3.1.14
     - run: pip install pyodide-build==0.21.0
-    - run: pyodide build
+    - run: pyodide build    
     - uses: actions/upload-artifact@v3
       with:
         name: pyodide wheel
         path: dist
-
+    - run: bash ./setup_test_env.sh
