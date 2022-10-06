@@ -62,6 +62,15 @@ class PyodideHTTPAdapter(BaseAdapter):
         else:
             # non-streaming response, make it look like a stream
             response.raw = BytesIO(resp.body)
+
+        def new_read(self,amt=None,decode_content=False,cache_content=False):
+            return self.old_read(amt)
+
+        # make the response stream look like a urllib3 stream
+        response.raw.old_read=response.raw.read
+        response.raw.read=new_read.__get__(response.raw,type(response.raw))
+
+
         response.reason = ''
         response.url = request.url
         return response

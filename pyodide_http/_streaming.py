@@ -23,10 +23,7 @@ import io
 import json
 import js
 from js import crossOriginIsolated
-try:
-    from pyodide.ffi import to_js
-except ImportError:
-    from pyodide import to_js
+from pyodide.ffi import to_js
 from urllib.request import Request
 SUCCESS_HEADER = -1
 SUCCESS_EOF = -2
@@ -105,7 +102,7 @@ self.addEventListener("message", async function (event) {
             // return the headers first via textencoder
             var headers = [];
             for (const pair of response.headers.entries()) {
-                headers.push([pair[0], pair[0]]);
+                headers.push([pair[0], pair[1]]);
             }
             headerObj = { headers: headers, status: response.status, connectionID };
             const headerText = JSON.stringify(headerObj);
@@ -208,7 +205,7 @@ class _StreamingFetcher:
         body = request.body
         fetch_data = {"headers": headers, "body": body, "method": request.method}
         # start the request off in the worker
-        timeout=int(1000*timeout) if request.timeout>0 else None
+        timeout=int(1000*request.timeout) if request.timeout>0 else None
         shared_buffer = js.SharedArrayBuffer.new(1048576)
         int_buffer = js.Int32Array.new(shared_buffer)
         byte_buffer = js.Uint8Array.new(shared_buffer, 8)
