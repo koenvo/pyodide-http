@@ -15,12 +15,14 @@ import pytest_pyodide
 from pytest import fixture
 from pytest_pyodide import run_in_pyodide
 
+
 @contextlib.contextmanager
-def spawn_web_server_custom(server_folder,custom_headers):
+def spawn_web_server_custom(server_folder, custom_headers):
     tmp_dir = tempfile.mkdtemp()
     log_path = Path(tmp_dir) / "http-server.log"
     q = multiprocessing.Queue()
-    p = multiprocessing.Process(target=_run_web_server, args=(q, log_path, server_folder,custom_headers))
+    p = multiprocessing.Process(target=_run_web_server, args=(
+        q, log_path, server_folder, custom_headers))
 
     try:
         p.start()
@@ -37,7 +39,8 @@ def spawn_web_server_custom(server_folder,custom_headers):
         p.join()
         shutil.rmtree(tmp_dir)
 
-def _run_web_server(q, log_filepath, dist_dir,custom_headers):
+
+def _run_web_server(q, log_filepath, dist_dir, custom_headers):
     """Start the HTTP web server
     Parameters
     ----------
@@ -62,8 +65,8 @@ def _run_web_server(q, log_filepath, dist_dir,custom_headers):
 
         def end_headers(self):
             # Enable Cross-Origin Resource Sharing (CORS)
-            for k,v in custom_headers.items():
-                self.send_header(k,v)   
+            for k, v in custom_headers.items():
+                self.send_header(k, v)
             self.send_header("Access-Control-Allow-Origin", "*")
             super().end_headers()
 
@@ -85,51 +88,57 @@ def _run_web_server(q, log_filepath, dist_dir,custom_headers):
         httpd.service_actions = service_actions  # type: ignore[assignment]
         httpd.serve_forever()
 
-@fixture(scope="session",params=["isolated","non-isolated"])
+
+@fixture(scope="session", params=["isolated", "non-isolated"])
 def web_server_main(request):
-    if request.param=="isolated":
-        headers={"x-mylovelyheader":"123","Cross-Origin-Opener-Policy":"same-origin","Cross-Origin-Embedder-Policy":"require-corp"}
+    if request.param == "isolated":
+        headers = {"x-mylovelyheader": "123", "Cross-Origin-Opener-Policy": "same-origin",
+                   "Cross-Origin-Embedder-Policy": "require-corp"}
     else:
-        headers={"x-mylovelyheader":"123"}
-    headers["Access-Control-Expose-Headers"]=",".join([x for x in headers.keys()])
+        headers = {"x-mylovelyheader": "123"}
+    # this header is needed otherwise chrome strips the headers in a cross origin request (which all selenium requests are)
+    headers["Access-Control-Expose-Headers"] = ",".join(
+        [x for x in headers.keys()])
     """Web server that serves files in the dist directory"""
-    with spawn_web_server_custom(request.config.option.dist_dir,headers) as output:
+    with spawn_web_server_custom(request.config.option.dist_dir, headers) as output:
         yield output
 
 
 @fixture(scope="module")
 def dist_dir(request):
     # return pyodide dist dir relative to top level of webserver
-    p=Path(request.config.getoption('--dist-dir')).resolve()
-    p=p.relative_to(Path(__file__).parent.parent)
+    p = Path(request.config.getoption('--dist-dir')).resolve()
+    p = p.relative_to(Path(__file__).parent.parent)
     return p
+
 
 @fixture(scope="module")
 def web_server_dist(request):
-    server_folder=Path(__file__).parent.parent
-    headers={"x-mylovelyheader":"123"}    
-    headers["Access-Control-Expose-Headers"]=",".join([x for x in headers.keys()])
-    with spawn_web_server_custom(server_folder,headers) as server:
+    server_folder = Path(__file__).parent.parent
+    headers = {"x-mylovelyheader": "123"}
+    headers["Access-Control-Expose-Headers"] = ",".join(
+        [x for x in headers.keys()])
+    with spawn_web_server_custom(server_folder, headers) as server:
         server_hostname, server_port, _ = server
-        base_url=f"http://{server_hostname}:{server_port}/"
+        base_url = f"http://{server_hostname}:{server_port}/"
         yield base_url
+
 
 @fixture(scope="module")
 def big_file_path(dist_dir):
-    test_size=0
-    test_filename=None
+    test_size = 0
+    test_filename = None
     for f in (Path(__file__).parent.parent / dist_dir).iterdir():
         if f.is_file():
-            sz=f.stat().st_size
-            if sz>test_size:
-                test_size=sz
-                test_filename=f.name
-    return dist_dir / test_filename,test_size
+            sz = f.stat().st_size
+            if sz > test_size:
+                test_size = sz
+                test_filename = f.name
+    return dist_dir / test_filename, test_size
 
 
-
-def _install_package(selenium,base_url):
-    wheel_folder=Path(__file__).parent.parent / "dist"
+def _install_package(selenium, base_url):
+    wheel_folder = Path(__file__).parent.parent / "dist"
 
     selenium.run_js(
         f"""
@@ -139,7 +148,7 @@ def _install_package(selenium,base_url):
     selenium.run_async(f'import micropip\nawait micropip.install("requests")')
 
     for wheel in wheel_folder.glob("*.whl"):
-        url = base_url +"dist/" + str(wheel.name)
+        url = base_url + "dist/" + str(wheel.name)
         selenium.run_async(f'await micropip.install("{url}")')
 
         selenium.run(
@@ -150,20 +159,21 @@ def _install_package(selenium,base_url):
             """
         )
 
-def get_install_package_code(base_url):
-    wheel_folder=Path(__file__).parent.parent / "dist"
 
-    code="""
+def get_install_package_code(base_url):
+    wheel_folder = Path(__file__).parent.parent / "dist"
+
+    code = """
 import asyncio
 import micropip
 await micropip.install("requests")
 """
 
     for wheel in wheel_folder.glob("*.whl"):
-        url = base_url +"dist/" + str(wheel.name)
-        code+=f'await micropip.install("{url}")\n'
+        url = base_url + "dist/" + str(wheel.name)
+        code += f'await micropip.install("{url}")\n'
 
-    code+="""
+    code += """
 import pyodide_http
 pyodide_http.patch_all()
 import requests
@@ -174,17 +184,18 @@ await promise
 """
     return code
 
-#def test_requests_hango(selenium_standalone,web_server_dist,big_file_path):
+# def test_requests_hango(selenium_standalone,web_server_dist,big_file_path):
 #    import time
 #    while True:
 #        time.sleep(1)
 
-def test_requests_stream_worker(selenium_standalone,web_server_dist,big_file_path):
-    test_filename,test_size=big_file_path
-    fetch_url=f"{web_server_dist}{test_filename}"
-    resp=selenium_standalone.run_webworker(
-    get_install_package_code(web_server_dist)+
-f"""
+
+def test_requests_stream_worker(selenium_standalone, web_server_dist, big_file_path):
+    test_filename, test_size = big_file_path
+    fetch_url = f"{web_server_dist}{test_filename}"
+    resp = selenium_standalone.run_webworker(
+        get_install_package_code(web_server_dist) +
+        f"""
 import js
 #assert(js.crossOriginIsolated==True)
 import requests
@@ -204,45 +215,48 @@ if js.crossOriginIsolated:
 data_len
         """)
 
-    assert resp==big_file_path[1] 
+    assert resp == big_file_path[1]
 
-def test_requests_404(selenium_standalone,dist_dir,web_server_dist):
-    _install_package(selenium_standalone,web_server_dist)
+
+def test_requests_404(selenium_standalone, dist_dir, web_server_dist):
+    _install_package(selenium_standalone, web_server_dist)
 
     @run_in_pyodide
-    def test_fn(selenium_standalone,base_url):
+    def test_fn(selenium_standalone, base_url):
         import requests
-        resp=requests.get(f"{base_url}/surely_this_file_does_not_exist.hopefully.")
-        response=resp.status_code
+        resp = requests.get(
+            f"{base_url}/surely_this_file_does_not_exist.hopefully.")
+        response = resp.status_code
         return response
 
-    assert test_fn(selenium_standalone,f"{web_server_dist}{dist_dir}/")==404
-
-def test_install_package_isolated(selenium_standalone,web_server_dist):
-    _install_package(selenium_standalone,web_server_dist)
+    assert test_fn(selenium_standalone, f"{web_server_dist}{dist_dir}/") == 404
 
 
-def test_requests_stream_main_thread(selenium_standalone,dist_dir,web_server_dist,big_file_path):
-    _install_package(selenium_standalone,web_server_dist)
-    test_filename,test_size=big_file_path
+def test_install_package_isolated(selenium_standalone, web_server_dist):
+    _install_package(selenium_standalone, web_server_dist)
+
+
+def test_requests_stream_main_thread(selenium_standalone, dist_dir, web_server_dist, big_file_path):
+    _install_package(selenium_standalone, web_server_dist)
+    test_filename, test_size = big_file_path
+
     @run_in_pyodide
-    def test_fn(selenium_standalone,fetch_url):
+    def test_fn(selenium_standalone, fetch_url):
         import requests
-        resp=requests.get(fetch_url,stream=True)
-        data=resp.content
+        resp = requests.get(fetch_url, stream=True)
+        data = resp.content
         return len(data)
-    assert test_fn(selenium_standalone,f"{web_server_dist}{test_filename}")==test_size
+    assert test_fn(selenium_standalone,
+                   f"{web_server_dist}{test_filename}") == test_size
 
-def test_response_headers(selenium_standalone,web_server_dist,big_file_path):
-    _install_package(selenium_standalone,web_server_dist)
-    test_filename,_=big_file_path
+
+def test_response_headers(selenium_standalone, web_server_dist, big_file_path):
+    _install_package(selenium_standalone, web_server_dist)
+    test_filename, _ = big_file_path
+
     @run_in_pyodide
-    def test_fn(selenium_standalone,fetch_url):
+    def test_fn(selenium_standalone, fetch_url):
         import requests
-        resp=requests.get(fetch_url,stream=True)
-        assert(resp.headers["X-MyLovelyHeader"]=="123")
-    test_fn(selenium_standalone,f"{web_server_dist}{test_filename}")
-
-
-
-
+        resp = requests.get(fetch_url, stream=True)
+        assert (resp.headers["X-MyLovelyHeader"] == "123")
+    test_fn(selenium_standalone, f"{web_server_dist}{test_filename}")
