@@ -260,3 +260,46 @@ def test_response_headers(selenium_standalone, web_server_dist, big_file_path):
         resp = requests.get(fetch_url, stream=True)
         assert (resp.headers["X-MyLovelyHeader"] == "123")
     test_fn(selenium_standalone, f"{web_server_dist}{test_filename}")
+
+# test if two requests in parallel actually stream together rather than one at a time
+def test_requests_parallel_stream_workers(request,selenium_standalone, web_server_dist, big_file_path):
+    if str(request.node.name).find("non-isolated")!=-1:
+        return
+    test_filename, _ = big_file_path
+    fetch_url = f"{web_server_dist}{test_filename}"
+    resp = selenium_standalone.run_webworker(
+        get_install_package_code(web_server_dist) +
+        f"""
+import js
+# parallel streaming only works if isolated
+assert(js.crossOriginIsolated)
+import requests
+resp=requests.get('{fetch_url}',stream=True)
+resp2=requests.get('{fetch_url}',stream=True)
+data_len=0
+data_len_2=0
+data_count=0
+
+# if parallel streaming is working, there will be a point where:
+# a) both streams have read data
+# b) both streams haven't read everything
+data_minimum_non_zero=None
+
+while True:
+    this_len=len(resp.raw.read1())
+    this_len_2=len(resp2.raw.read1())
+#        print(this_len,this_len_2)
+    data_len+=this_len
+    data_len_2+=this_len_2
+    if this_len==0 and this_len_2==0:
+        break
+    if data_minimum_non_zero==None and data_len!=0 and data_len_2!=0:
+        data_minimum_non_zero=data_len,data_len_2
+    data_count+=1
+# check streaming is really happening
+assert (data_count>1)
+# check parallel streaming is happening
+assert (data_minimum_non_zero!=None and data_minimum_non_zero[0]<data_len and data_minimum_non_zero[1]<data_len_2)
+data_len
+    """)
+    assert resp == big_file_path[1]
