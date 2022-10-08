@@ -25,6 +25,7 @@ import js
 from js import crossOriginIsolated
 from pyodide.ffi import to_js
 from urllib.request import Request
+
 SUCCESS_HEADER = -1
 SUCCESS_EOF = -2
 ERROR_TIMEOUT = -3
@@ -137,14 +138,14 @@ def _obj_from_dict(dict_val: dict) -> any:
 
 
 class _ReadStream(io.RawIOBase):
-    def __init__(self, int_buffer, byte_buffer,timeout,worker,connection_id):
+    def __init__(self, int_buffer, byte_buffer, timeout, worker, connection_id):
         self.int_buffer = int_buffer
         self.byte_buffer = byte_buffer
         self.read_pos = 0
         self.read_len = 0
-        self.connection_id=connection_id
-        self.worker=worker
-        self.timeout=int(1000*timeout) if timeout>0 else None
+        self.connection_id = connection_id
+        self.worker = worker
+        self.timeout = int(1000 * timeout) if timeout > 0 else None
 
     def __del__(self):
         self.worker.postMessage(_obj_from_dict({"close": self.connection_id}))
@@ -165,15 +166,17 @@ class _ReadStream(io.RawIOBase):
             # wait for the worker to send something
             js.Atomics.store(self.int_buffer, 0, 0)
             self.worker.postMessage(_obj_from_dict({"getMore": self.connection_id}))
-            if js.Atomics.wait(self.int_buffer, 0, 0, self.timeout)=='timed-out':
+            if js.Atomics.wait(self.int_buffer, 0, 0, self.timeout) == "timed-out":
                 from ._core import _StreamingTimeout
-                raise  _StreamingTimeout
+
+                raise _StreamingTimeout
             data_len = self.int_buffer[0]
             if data_len > 0:
                 self.read_len = data_len
                 self.read_pos = 0
-            elif data_len==ERROR_EXCEPTION:
+            elif data_len == ERROR_EXCEPTION:
                 from ._core import _StreamingError
+
                 raise _StreamingError
             else:
                 # EOF, free the buffers and return zero
@@ -184,8 +187,9 @@ class _ReadStream(io.RawIOBase):
                 return 0
         # copy from int32array to python bytes
         ret_length = min(self.read_len, len(byte_obj))
-        self.byte_buffer.subarray(
-            self.read_pos, self.read_pos+ret_length).assign_to(byte_obj[0:ret_length])
+        self.byte_buffer.subarray(self.read_pos, self.read_pos + ret_length).assign_to(
+            byte_obj[0:ret_length]
+        )
         self.read_len -= ret_length
         self.read_pos += ret_length
         return ret_length
@@ -194,18 +198,20 @@ class _ReadStream(io.RawIOBase):
 class _StreamingFetcher:
     def __init__(self):
         # make web-worker and data buffer on startup
-        dataBlob = js.Blob.new([_STREAMING_WORKER_CODE], _obj_from_dict(
-            {"type": 'application/javascript'}))
+        dataBlob = js.Blob.new(
+            [_STREAMING_WORKER_CODE], _obj_from_dict({"type": "application/javascript"})
+        )
         dataURL = js.URL.createObjectURL(dataBlob)
         self._worker = js.Worker.new(dataURL)
 
     def send(self, request):
         from ._core import Response
+
         headers = request.headers
         body = request.body
         fetch_data = {"headers": headers, "body": body, "method": request.method}
         # start the request off in the worker
-        timeout=int(1000*request.timeout) if request.timeout>0 else None
+        timeout = int(1000 * request.timeout) if request.timeout > 0 else None
         shared_buffer = js.SharedArrayBuffer.new(1048576)
         int_buffer = js.Int32Array.new(shared_buffer)
         byte_buffer = js.Uint8Array.new(shared_buffer, 8)
@@ -213,15 +219,34 @@ class _StreamingFetcher:
         js.Atomics.store(int_buffer, 0, 0)
         js.Atomics.notify(int_buffer, 0)
         absolute_url = js.URL.new(request.url, js.location).href
-        js.console.log(_obj_from_dict(
-            {"buffer": shared_buffer, "url": absolute_url, "fetchParams": fetch_data}))
-        self._worker.postMessage(_obj_from_dict(
-            {"buffer": shared_buffer, "url": absolute_url, "fetchParams": fetch_data}))
+        js.console.log(
+            _obj_from_dict(
+                {
+                    "buffer": shared_buffer,
+                    "url": absolute_url,
+                    "fetchParams": fetch_data,
+                }
+            )
+        )
+        self._worker.postMessage(
+            _obj_from_dict(
+                {
+                    "buffer": shared_buffer,
+                    "url": absolute_url,
+                    "fetchParams": fetch_data,
+                }
+            )
+        )
         # wait for the worker to send something
         js.Atomics.wait(int_buffer, 0, 0, timeout)
         if int_buffer[0] == 0:
             from ._core import _StreamingTimeout
-            raise _StreamingTimeout("Timeout connecting to streaming request",request=request, response=None)
+
+            raise _StreamingTimeout(
+                "Timeout connecting to streaming request",
+                request=request,
+                response=None,
+            )
         if int_buffer[0] == SUCCESS_HEADER:
             # got response
             # header length is in second int of intBuffer
@@ -236,8 +261,16 @@ class _StreamingFetcher:
             return Response(
                 status_code=response_obj["status"],
                 headers=response_obj["headers"],
-                body=io.BufferedReader(_ReadStream(
-                    int_buffer, byte_buffer,request.timeout,self._worker,response_obj["connectionID"]), buffer_size=1048576)
+                body=io.BufferedReader(
+                    _ReadStream(
+                        int_buffer,
+                        byte_buffer,
+                        request.timeout,
+                        self._worker,
+                        response_obj["connectionID"],
+                    ),
+                    buffer_size=1048576,
+                ),
             )
         if int_buffer[0] == ERROR_EXCEPTION:
             string_len = int_buffer[1]
@@ -245,7 +278,10 @@ class _StreamingFetcher:
             decoder = js.TextDecoder.new()
             json_str = decoder.decode(byte_buffer.slice(0, string_len))
             from ._core import _StreamingError
-            raise _StreamingError(f"Exception thrown in fetch: {json_str}",request=request, response=None)
+
+            raise _StreamingError(
+                f"Exception thrown in fetch: {json_str}", request=request, response=None
+            )
 
 
 if crossOriginIsolated:
@@ -253,10 +289,12 @@ if crossOriginIsolated:
 else:
     _fetcher = None
 
+
 def send_streaming_request(request: Request):
     if _fetcher:
         return _fetcher.send(request)
     else:
         from ._core import show_streaming_warning
+
         show_streaming_warning()
         return False

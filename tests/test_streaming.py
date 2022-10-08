@@ -21,8 +21,9 @@ def spawn_web_server_custom(server_folder, custom_headers):
     tmp_dir = tempfile.mkdtemp()
     log_path = Path(tmp_dir) / "http-server.log"
     q = multiprocessing.Queue()
-    p = multiprocessing.Process(target=_run_web_server, args=(
-        q, log_path, server_folder, custom_headers))
+    p = multiprocessing.Process(
+        target=_run_web_server, args=(q, log_path, server_folder, custom_headers)
+    )
 
     try:
         p.start()
@@ -92,13 +93,15 @@ def _run_web_server(q, log_filepath, dist_dir, custom_headers):
 @fixture(scope="session", params=["isolated", "non-isolated"])
 def web_server_main(request):
     if request.param == "isolated":
-        headers = {"x-mylovelyheader": "123", "Cross-Origin-Opener-Policy": "same-origin",
-                   "Cross-Origin-Embedder-Policy": "require-corp"}
+        headers = {
+            "x-mylovelyheader": "123",
+            "Cross-Origin-Opener-Policy": "same-origin",
+            "Cross-Origin-Embedder-Policy": "require-corp",
+        }
     else:
         headers = {"x-mylovelyheader": "123"}
     # this header is needed otherwise chrome strips the headers in a cross origin request (which all selenium requests are)
-    headers["Access-Control-Expose-Headers"] = ",".join(
-        [x for x in headers.keys()])
+    headers["Access-Control-Expose-Headers"] = ",".join([x for x in headers.keys()])
     """Web server that serves files in the dist directory"""
     with spawn_web_server_custom(request.config.option.dist_dir, headers) as output:
         yield output
@@ -107,7 +110,7 @@ def web_server_main(request):
 @fixture(scope="module")
 def dist_dir(request):
     # return pyodide dist dir relative to top level of webserver
-    p = Path(request.config.getoption('--dist-dir')).resolve()
+    p = Path(request.config.getoption("--dist-dir")).resolve()
     p = p.relative_to(Path(__file__).parent.parent)
     return p
 
@@ -116,8 +119,7 @@ def dist_dir(request):
 def web_server_dist(request):
     server_folder = Path(__file__).parent.parent
     headers = {"x-mylovelyheader": "123"}
-    headers["Access-Control-Expose-Headers"] = ",".join(
-        [x for x in headers.keys()])
+    headers["Access-Control-Expose-Headers"] = ",".join([x for x in headers.keys()])
     with spawn_web_server_custom(server_folder, headers) as server:
         server_hostname, server_port, _ = server
         base_url = f"http://{server_hostname}:{server_port}/"
@@ -184,6 +186,7 @@ await promise
 """
     return code
 
+
 # def test_requests_hango(selenium_standalone,web_server_dist,big_file_path):
 #    import time
 #    while True:
@@ -194,8 +197,8 @@ def test_requests_stream_worker(selenium_standalone, web_server_dist, big_file_p
     test_filename, test_size = big_file_path
     fetch_url = f"{web_server_dist}{test_filename}"
     resp = selenium_standalone.run_webworker(
-        get_install_package_code(web_server_dist) +
-        f"""
+        get_install_package_code(web_server_dist)
+        + f"""
 import js
 #assert(js.crossOriginIsolated==True)
 import requests
@@ -213,7 +216,8 @@ if js.crossOriginIsolated:
     # check streaming is really happening
     assert (data_count>1)
 data_len
-        """)
+        """
+    )
 
     assert resp == big_file_path[1]
 
@@ -224,8 +228,8 @@ def test_requests_404(selenium_standalone, dist_dir, web_server_dist):
     @run_in_pyodide
     def test_fn(selenium_standalone, base_url):
         import requests
-        resp = requests.get(
-            f"{base_url}/surely_this_file_does_not_exist.hopefully.")
+
+        resp = requests.get(f"{base_url}/surely_this_file_does_not_exist.hopefully.")
         response = resp.status_code
         return response
 
@@ -236,18 +240,23 @@ def test_install_package_isolated(selenium_standalone, web_server_dist):
     _install_package(selenium_standalone, web_server_dist)
 
 
-def test_requests_stream_main_thread(selenium_standalone, dist_dir, web_server_dist, big_file_path):
+def test_requests_stream_main_thread(
+    selenium_standalone, dist_dir, web_server_dist, big_file_path
+):
     _install_package(selenium_standalone, web_server_dist)
     test_filename, test_size = big_file_path
 
     @run_in_pyodide
     def test_fn(selenium_standalone, fetch_url):
         import requests
+
         resp = requests.get(fetch_url, stream=True)
         data = resp.content
         return len(data)
-    assert test_fn(selenium_standalone,
-                   f"{web_server_dist}{test_filename}") == test_size
+
+    assert (
+        test_fn(selenium_standalone, f"{web_server_dist}{test_filename}") == test_size
+    )
 
 
 def test_response_headers(selenium_standalone, web_server_dist, big_file_path):
@@ -257,19 +266,24 @@ def test_response_headers(selenium_standalone, web_server_dist, big_file_path):
     @run_in_pyodide
     def test_fn(selenium_standalone, fetch_url):
         import requests
+
         resp = requests.get(fetch_url, stream=True)
-        assert (resp.headers["X-MyLovelyHeader"] == "123")
+        assert resp.headers["X-MyLovelyHeader"] == "123"
+
     test_fn(selenium_standalone, f"{web_server_dist}{test_filename}")
 
+
 # test if two requests in parallel actually stream together rather than one at a time
-def test_requests_parallel_stream_workers(request,selenium_standalone, web_server_dist, big_file_path):
-    if str(request.node.name).find("non-isolated")!=-1:
+def test_requests_parallel_stream_workers(
+    request, selenium_standalone, web_server_dist, big_file_path
+):
+    if str(request.node.name).find("non-isolated") != -1:
         return
     test_filename, _ = big_file_path
     fetch_url = f"{web_server_dist}{test_filename}"
     resp = selenium_standalone.run_webworker(
-        get_install_package_code(web_server_dist) +
-        f"""
+        get_install_package_code(web_server_dist)
+        + f"""
 import js
 # parallel streaming only works if isolated
 assert(js.crossOriginIsolated)
@@ -301,5 +315,6 @@ assert (data_count>1)
 # check parallel streaming is happening
 assert (data_minimum_non_zero!=None and data_minimum_non_zero[0]<data_len and data_minimum_non_zero[1]<data_len_2)
 data_len
-""")
+"""
+    )
     assert resp == big_file_path[1]

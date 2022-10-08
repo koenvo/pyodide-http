@@ -18,7 +18,7 @@ class FakeSock:
 
 
 def urlopen(url):
-    method = 'GET'
+    method = "GET"
     data = None
     headers = {}
     if isinstance(url, urllib.request.Request):
@@ -36,16 +36,17 @@ def urlopen(url):
     # data itself is uncompressed. This will cause problems while decoding our
     # fake response.
     headers_without_content_length = {
-        k: v
-        for k, v in resp.headers.items()
-        if k != 'content-length'
+        k: v for k, v in resp.headers.items() if k != "content-length"
     }
     response_data = (
-        b'HTTP/1.1 ' + str(resp.status_code).encode('ascii') + b"\n" +
-        "\n".join(
+        b"HTTP/1.1 "
+        + str(resp.status_code).encode("ascii")
+        + b"\n"
+        + "\n".join(
             f"{key}: {value}" for key, value in headers_without_content_length.items()
-        ).encode('ascii') + b"\n\n" +
-        resp.body
+        ).encode("ascii")
+        + b"\n\n"
+        + resp.body
     )
 
     response = HTTPResponse(FakeSock(response_data))
