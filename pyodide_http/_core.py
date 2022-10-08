@@ -90,8 +90,6 @@ def send(request: Request, stream: bool = False) -> Response:
     # XMLHttpRequest https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/timeout
     if _IN_WORKER and request.timeout!=0:
         xhr.timeout=int(request.timeout*1000)
-    for name, value in request.headers.items():
-        xhr.setRequestHeader(name, value)
 
     if _IN_WORKER:
         xhr.responseType = "arraybuffer"
@@ -99,6 +97,9 @@ def send(request: Request, stream: bool = False) -> Response:
         xhr.overrideMimeType('text/plain; charset=ISO-8859-15')
 
     xhr.open(request.method, request.url, False)
+    for name, value in request.headers.items():
+        xhr.setRequestHeader(name, value)
+
     xhr.send(request.body)
 
     headers = dict(Parser().parsestr(xhr.getAllResponseHeaders()))
