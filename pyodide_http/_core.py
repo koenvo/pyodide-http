@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Optional, Dict
 from email.parser import Parser
+from pyodide.ffi import to_js
 
 # need to import streaming here so that the web-worker is setup
 from ._streaming import send_streaming_request
@@ -109,7 +110,7 @@ def send(request: Request, stream: bool = False) -> Response:
     for name, value in request.headers.items():
         xhr.setRequestHeader(name, value)
 
-    xhr.send(request.body)
+    xhr.send(to_js(request.body))
 
     headers = dict(Parser().parsestr(xhr.getAllResponseHeaders()))
 
