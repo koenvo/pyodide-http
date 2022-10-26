@@ -57,10 +57,11 @@ def test_requests_get(selenium_standalone, dist_dir, web_server_base):
         import requests
 
         print("get:", base_url)
-        resp = requests.get(
-            f"{base_url}/yt-4.0.4-cp310-cp310-emscripten_3_1_14_wasm32.whl"
-        )
+        url = f"{base_url}/yt-4.0.4-cp310-cp310-emscripten_3_1_14_wasm32.whl"
+        resp = requests.get(url)
         data = resp.content
+        assert resp.request.url == url
+
         return len(data)
 
     assert test_fn(selenium_standalone, f"{web_server_base}{dist_dir}/") == 11373926
