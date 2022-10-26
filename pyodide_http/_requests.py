@@ -73,6 +73,7 @@ class PyodideHTTPAdapter(BaseAdapter):
 
         response.reason = ""
         response.url = request.url
+        response.request = request
         return response
 
     def close(self):
