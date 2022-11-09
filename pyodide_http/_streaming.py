@@ -209,7 +209,7 @@ class _StreamingFetcher:
 
         headers = request.headers
         body = request.body
-        fetch_data = {"headers": headers, "body": body, "method": request.method}
+        fetch_data = {"headers": headers, "body": to_js(body), "method": request.method}
         # start the request off in the worker
         timeout = int(1000 * request.timeout) if request.timeout > 0 else None
         shared_buffer = js.SharedArrayBuffer.new(1048576)
