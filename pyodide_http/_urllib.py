@@ -17,7 +17,7 @@ class FakeSock:
         return BytesIO(self.data)
 
 
-def urlopen(url):
+def urlopen(url, *args, **kwargs):
     method = "GET"
     data = None
     headers = {}
@@ -53,6 +53,8 @@ def urlopen(url):
     response.begin()
     return response
 
+def urlopen_self_removed(self, url, *args, **kwargs):
+    return urlopen(url, *args, **kwargs)
 
 def patch():
     global _IS_PATCHED
@@ -61,5 +63,6 @@ def patch():
         return
 
     urllib.request.urlopen = urlopen
+    urllib.request.OpenerDirector.open = urlopen_self_removed
 
     _IS_PATCHED = True
