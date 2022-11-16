@@ -53,8 +53,10 @@ def urlopen(url, *args, **kwargs):
     response.begin()
     return response
 
+
 def urlopen_self_removed(self, url, *args, **kwargs):
     return urlopen(url, *args, **kwargs)
+
 
 def patch():
     global _IS_PATCHED
