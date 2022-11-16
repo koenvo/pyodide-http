@@ -41,9 +41,9 @@ Currently the following packages can be patched:
 - [requests](https://requests.readthedocs.io/en/latest/)
 - [urllib](https://docs.python.org/3/library/urllib.request.html)
 
-Package | Patched
------------------
-[requests](https://requests.readthedocs.io/en/latest/) | [`Session`](https://requests.readthedocs.io/en/latest/api/#requests.Session)
-         | [`request`](https://requests.readthedocs.io/en/latest/api/#requests.request)
-         | [`head`](https://requests.readthedocs.io/en/latest/api/#requests.head), [`get`](https://requests.readthedocs.io/en/latest/api/#requests.get), [`post`](https://requests.readthedocs.io/en/latest/api/#requests.post), [`put`](https://requests.readthedocs.io/en/latest/api/#requests.put), [`patch`](https://requests.readthedocs.io/en/latest/api/#requests.patch), [`delete`](https://requests.readthedocs.io/en/latest/api/#requests.delete)
+| Package                                                | Patched |
+|--------------------------------------------------------|---------|
+| [requests](https://requests.readthedocs.io/en/latest/) | [`Session`](https://requests.readthedocs.io/en/latest/api/#requests.Session) | 
+|                                                        | [`request`](https://requests.readthedocs.io/en/latest/api/#requests.request) |                                                                                                                                                                                                                                                                                                                                                                     
+|                                                        | [`head`](https://requests.readthedocs.io/en/latest/api/#requests.head), [`get`](https://requests.readthedocs.io/en/latest/api/#requests.get), [`post`](https://requests.readthedocs.io/en/latest/api/#requests.post), [`put`](https://requests.readthedocs.io/en/latest/api/#requests.put), [`patch`](https://requests.readthedocs.io/en/latest/api/#requests.patch), [`delete`](https://requests.readthedocs.io/en/latest/api/#requests.delete) | 
 
