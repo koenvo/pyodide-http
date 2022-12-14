@@ -1,7 +1,7 @@
 # Pyodide-HTTP
 
 [![PyPI Latest Release](https://img.shields.io/pypi/v/pyodide-http.svg)](https://pypi.org/project/pyodide-http/)
-![GHA](https://github.com/pyodide/pytest-pyodide/actions/workflows/main.yml/badge.svg)
+[![GHA](https://github.com/koenvo/pyodide-http/actions/workflows/main.yml/badge.svg)](https://github.com/koenvo/pyodide-http/actions/workflows/main.yml/badge.svg)
 
 Provides patches for widely used http libraries to make them work in Pyodide environments like JupyterLite.
 
