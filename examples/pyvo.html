@@ -1,0 +1,19 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+        <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    </head>
+    <body>
+    <py-config>
+        packages = ["pyvo", "ssl", "pyodide-http"]
+    </py-config>
+
+    <py-script>
+        import pyodide_http
+        pyodide_http.patch_all()
+        from pyvo import registry
+        res = registry.search(servicetype = 'conesearch', waveband = 'UV')
+        print(res)
+    </py-script>
+    </body>
+</html>
