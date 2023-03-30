@@ -55,4 +55,4 @@ Currently the following packages can be patched:
 
 `pyodide-http` is used by a some awesome projects:
 - [Pyodide](https://github.com/pyodide/pyodide) - included as a standard package
-- [Panel](https://github.com/holoviz/panel) - included since 0.14.1 (can be disabled) when running Panel in the Browser using WASM. [Read more](https://github.com/holoviz/panel/blob/master/doc/user_guide/Running_in_Webassembly.md)
+- [Panel](https://github.com/holoviz/panel) - included since 0.14.1 (can be disabled) when running Panel in the Browser using WASM. [Read more](https://panel.holoviz.org/user_guide/Running_in_Webassembly.html#handling-http-requests)
