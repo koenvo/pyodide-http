@@ -7,6 +7,12 @@ from pyodide.ffi import to_js
 # need to import streaming here so that the web-worker is setup
 from ._streaming import send_streaming_request
 
+"""
+There are some headers that trigger unintended CORS preflight requests.
+See also https://github.com/koenvo/pyodide-http/issues/22
+"""
+HEADERS_TO_IGNORE = ("user-agent",)
+
 
 class _RequestError(Exception):
     def __init__(self, message=None, *, request=None, response=None):
@@ -108,7 +114,8 @@ def send(request: Request, stream: bool = False) -> Response:
 
     xhr.open(request.method, request.url, False)
     for name, value in request.headers.items():
-        xhr.setRequestHeader(name, value)
+        if name.lower() not in HEADERS_TO_IGNORE:
+            xhr.setRequestHeader(name, value)
 
     xhr.send(to_js(request.body))
 
