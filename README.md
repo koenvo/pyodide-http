@@ -10,7 +10,7 @@ Provides patches for widely used http libraries to make them work in Pyodide env
 ```python
 # 1. Install this package
 import micropip
-await micropip.install('pyodide-http')
+await micropip.install('pyodide-http>=0.2.1')
 
 # 2. Patch requests
 import pyodide_http
