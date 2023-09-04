@@ -37,7 +37,7 @@ class PyodideHTTPAdapter(BaseAdapter):
                 pyodide_request.timeout = (pyodide_request.timeout[0] or 0) + (
                     pyodide_request.timeout[1] or 0
                 )
-            elif len(pyodide_request) > 0:
+            elif len(pyodide_request.timeout) > 0:
                 pyodide_request.timeout = pyodide_request.timeout[0] or 0
         if not pyodide_request.timeout:
             pyodide_request.timeout = 0
