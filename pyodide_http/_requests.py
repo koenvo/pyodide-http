@@ -32,8 +32,13 @@ class PyodideHTTPAdapter(BaseAdapter):
         stream = kwargs.get("stream", False)
         pyodide_request = Request(request.method, request.url)
         pyodide_request.timeout = kwargs.get("timeout", 0)
-        if type(pyodide_request.timeout) is tuple:
-            pyodide_request.timeout = pyodide_request.timeout[0] + pyodide_request.timeout[1] if 1 < len(pyodide_request.timeout[1]) else 0
+        if isinstance(pyodide_request.timeout, tuple):
+            if len(pyodide_request.timeout) > 1:
+                pyodide_request.timeout = (pyodide_request.timeout[0] or 0) + (
+                    pyodide_request.timeout[1] or 0
+                )
+            elif len(pyodide_request.timeout) > 0:
+                pyodide_request.timeout = pyodide_request.timeout[0] or 0
         if not pyodide_request.timeout:
             pyodide_request.timeout = 0
         pyodide_request.params = None  # this is done in preparing request now
