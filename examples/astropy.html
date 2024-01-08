@@ -5,15 +5,15 @@
     </head>
     <body>
     <py-config>
-        packages = ["pyvo", "ssl", "pyodide-http>=0.2.1"]
+        packages = ["astropy", "ssl", "pyodide-http>=0.2.1"]
     </py-config>
 
     <py-script>
         import pyodide_http
         pyodide_http.patch_all()
 
-        from pyvo import registry
-        res = registry.search(servicetype = 'conesearch', waveband = 'UV')
+        from astropy.coordinates import SkyCoord
+        res = SkyCoord.from_name("Crab Nebula")
         print(res)
     </py-script>
     </body>
