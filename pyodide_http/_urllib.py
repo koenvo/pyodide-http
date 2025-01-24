@@ -50,6 +50,7 @@ def urlopen(url, *args, **kwargs):
     )
 
     response = HTTPResponse(FakeSock(response_data))
+    response.url = url
     response.begin()
     return response
 
