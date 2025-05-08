@@ -118,7 +118,12 @@ def send(request: Request, stream: bool = False) -> Response:
         if name.lower() not in HEADERS_TO_IGNORE:
             xhr.setRequestHeader(name, value)
 
-    xhr.send(to_js(request.body))
+    body = request.body
+
+    if hasattr(body, 'read'):
+        body = body.read()
+
+    xhr.send(to_js(body))
 
     headers = dict(Parser().parsestr(xhr.getAllResponseHeaders()))
 
