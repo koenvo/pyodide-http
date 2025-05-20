@@ -4,6 +4,8 @@ from typing import Optional, Dict
 from email.parser import Parser
 from pyodide.ffi import to_js
 
+from . import _options
+
 # need to import streaming here so that the web-worker is setup
 from ._streaming import send_streaming_request
 
@@ -123,6 +125,7 @@ def send(request: Request, stream: bool = False) -> Response:
     if hasattr(body, 'read'):
         body = body.read()
 
+    xhr.withCredentials = _options.with_credentials
     xhr.send(to_js(body))
 
     headers = dict(Parser().parsestr(xhr.getAllResponseHeaders()))
