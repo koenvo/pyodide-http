@@ -9,10 +9,11 @@ import os
 import socketserver
 
 from pathlib import Path
+import os.path
 import glob
 
 import pytest_pyodide
-from pytest import fixture
+from pytest import fixture, fail
 from pytest_pyodide import run_in_pyodide
 
 
@@ -160,6 +161,9 @@ def _install_package(selenium, base_url):
             import requests
             """
         )
+        break
+    else:
+        fail(f"no pre-built *.whl found in {os.path.relpath(wheel_folder)}")
 
 
 def get_install_package_code(base_url):
