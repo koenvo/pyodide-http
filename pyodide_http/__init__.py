@@ -9,7 +9,7 @@ from contextlib import ContextDecorator
 from dataclasses import dataclass
 
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 
 @dataclass
