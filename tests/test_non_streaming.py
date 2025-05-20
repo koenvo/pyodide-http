@@ -53,6 +53,37 @@ def test_install_package(selenium_standalone, web_server_base):
     _install_package(selenium_standalone, web_server_base)
 
 
+def test_credentials_context_manager(selenium_standalone, dist_dir, web_server_base):
+    _install_package(selenium_standalone, web_server_base)
+
+    @run_in_pyodide
+    def test_fn(selenium_standalone, base_url):
+        import pyodide_http as ph
+
+        assert not ph._options.with_credentials
+
+        with ph.option_context(with_credentials=True):
+            assert ph._options.with_credentials
+
+        assert not ph._options.with_credentials
+
+
+def test_credentials_option(selenium_standalone, dist_dir, web_server_base):
+    _install_package(selenium_standalone, web_server_base)
+
+    @run_in_pyodide
+    def test_fn(selenium_standalone, base_url):
+        import pyodide_http as ph
+
+        assert not ph._options.with_credentials
+
+        ph.set_with_credentials_option(True)
+        assert ph._options.with_credentials
+
+        ph.set_with_credentials_option(False)
+        assert not ph._options.with_credentials
+
+
 def test_requests_get(selenium_standalone, dist_dir, web_server_base):
     _install_package(selenium_standalone, web_server_base)
 
