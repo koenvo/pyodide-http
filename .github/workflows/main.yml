@@ -12,7 +12,7 @@ on:
 jobs:
   # Build for pyodide 0.21.0
   Pyodide_test_and_build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
@@ -21,10 +21,4 @@ jobs:
     - uses: mymindstorm/setup-emsdk@v11
       with:
         version: 3.1.14
-    - run: pip install pyodide-build==0.21.0
-    - run: pyodide build    
-    - uses: actions/upload-artifact@v3
-      with:
-        name: pyodide wheel
-        path: dist
     - run: bash ./setup_test_env.sh
