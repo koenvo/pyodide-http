@@ -1,5 +1,5 @@
 
-name: Build Pyodide wheel
+name: Run tests
 
 # Controls when the workflow will run
 on:
@@ -10,7 +10,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Build for pyodide 0.21.0
   Pyodide_test_and_build:
     runs-on: ubuntu-latest
     steps:
