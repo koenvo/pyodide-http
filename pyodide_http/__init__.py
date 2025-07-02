@@ -5,7 +5,42 @@ try:
 except ImportError:
     _SHOULD_PATCH = False
 
-__version__ = "0.2.2"
+from contextlib import ContextDecorator
+from dataclasses import dataclass
+
+
+__version__ = "0.2.3"
+
+
+@dataclass
+class Options:
+    with_credentials: bool = False
+
+
+_options = Options()
+
+
+def set_with_credentials_option(value: bool):
+    global _options
+    _options.with_credentials = value
+
+
+class option_context(ContextDecorator):
+    def __init__(self, with_credentials=False):
+        self._with_credentials = with_credentials
+        self._default_options = None
+
+    def __enter__(self):
+        global _options
+        self._default_options = _options
+
+        _options = Options()
+        _options.with_credentials = self._with_credentials
+
+    def __exit__(self, *_):
+        if self._default_options is not None:
+            global _options
+            _options = self._default_options
 
 
 def patch_requests(continue_on_import_error: bool = False):
